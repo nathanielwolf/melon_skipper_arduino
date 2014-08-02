@@ -5,6 +5,21 @@
 #define NODEID     1
 #define NETWORKID  100
 #define FREQUENCY  RF69_433MHZ
+#define MAX_NODES  20
+#define PAIRED_THRESH    
+#define UNPAIRED_THRESH
+
+enum States {
+  
+};
+
+// record of last received packets
+typedef struct {
+  short lastRSSI;
+  short avgRSSI;
+  unsigned long lastReceived;
+} node;
+node nodes[ MAX_NODES ];  // array of up to MAX_NODES
 
 bool promiscuousMode = true;
 unsigned long lastSend = 0;
@@ -16,6 +31,7 @@ void setup(){
   Serial.begin( 9600 );
   delay(10);
   radio.initialize( FREQUENCY, NODEID, NETWORKID );
+  radio.promiscuous( promiscuousMode );
   radio.setHighPower();
 
   // set 1200 bitrate for best range
@@ -26,8 +42,6 @@ void setup(){
   radio.writeReg( 0x06, 0x52 );
   radio.writeReg( 0x19, 0x40 | 0x10 | 0x05 );
   radio.writeReg( 0x18, 0x00 | 0x00 | 0x01 );
-
-  radio.promiscuous( promiscuousMode );
   
 }
 
@@ -41,6 +55,15 @@ void loop(){
     }
     Serial.print("   [RX_RSSI:");Serial.print(radio.RSSI);Serial.print("]");
     Serial.println();
+    
+    // store received strength
+    if( radio.SENDERID > MAX_NODES || radio.SENDERID < 0 ){
+      Serial.println( "Bad sender ID" );
+    }
+    else{
+      nodes[ radio.SENDERID ].lastRSSI = map( radio.RSSI, -25, -100, 0, 100 );
+      nodes[ radio.SENDERID ].lastReceived = millis();
+    }
   }
   
   if( millis() - lastSend > 2000 ){
@@ -57,8 +80,11 @@ void loop(){
     }
   }
   
-  
 }
 
-
+int calculateDisplay(){
+ 
+  int bestRSSI;
+  
+}
 
