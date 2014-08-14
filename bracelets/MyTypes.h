@@ -12,6 +12,8 @@ typedef struct {
   byte averageRssi;
   unsigned long lastReceived;  // timestamp of last recieved packet
   boolean paired;
+  int nodeHue[3];
+  int brightenedHue[3];
 } Node;
 
 #endif
