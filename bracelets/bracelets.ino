@@ -1,3 +1,4 @@
+#include <avr/wdt.h> 
 #include <SPI.h>
 #include <RFM69.h>
 #include <RFM69registers.h>
@@ -49,6 +50,10 @@ void setup(){
   
   Serial.begin( 9600 );
   delay(10);
+  
+  // Configure the watchdog timer
+  wdt_enable(WDTO_8S);
+  
   radio.initialize( FREQUENCY, NODEID, NETWORKID );
   radio.promiscuous( promiscuousMode );
   radio.setHighPower();
@@ -246,6 +251,9 @@ void loop(){
   setLed(false);
     
   delay(30);
+  
+  // Pat the dog (watchdog timer)
+  wdt_reset();
 }
 
 // Update node status whenever we receive a packet from it
