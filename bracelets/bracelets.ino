@@ -46,6 +46,25 @@ byte bestNode;
 
 Adafruit_NeoPixel ledRing = Adafruit_NeoPixel( N_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800 );
 
+const byte dim_curve[] = {
+    0,   1,   1,   2,   2,   2,   2,   2,   2,   3,   3,   3,   3,   3,   3,   3,
+    3,   3,   3,   3,   3,   3,   3,   4,   4,   4,   4,   4,   4,   4,   4,   4,
+    4,   4,   4,   5,   5,   5,   5,   5,   5,   5,   5,   5,   5,   6,   6,   6,
+    6,   6,   6,   6,   6,   7,   7,   7,   7,   7,   7,   7,   8,   8,   8,   8,
+    8,   8,   9,   9,   9,   9,   9,   9,   10,  10,  10,  10,  10,  11,  11,  11,
+    11,  11,  12,  12,  12,  12,  12,  13,  13,  13,  13,  14,  14,  14,  14,  15,
+    15,  15,  16,  16,  16,  16,  17,  17,  17,  18,  18,  18,  19,  19,  19,  20,
+    20,  20,  21,  21,  22,  22,  22,  23,  23,  24,  24,  25,  25,  25,  26,  26,
+    27,  27,  28,  28,  29,  29,  30,  30,  31,  32,  32,  33,  33,  34,  35,  35,
+    36,  36,  37,  38,  38,  39,  40,  40,  41,  42,  43,  43,  44,  45,  46,  47,
+    48,  48,  49,  50,  51,  52,  53,  54,  55,  56,  57,  58,  59,  60,  61,  62,
+    63,  64,  65,  66,  68,  69,  70,  71,  73,  74,  75,  76,  78,  79,  81,  82,
+    83,  85,  86,  88,  90,  91,  93,  94,  96,  98,  99,  101, 103, 105, 107, 109,
+    110, 112, 114, 116, 118, 121, 123, 125, 127, 129, 132, 134, 136, 139, 141, 144,
+    146, 149, 151, 154, 157, 159, 162, 165, 168, 171, 174, 177, 180, 183, 186, 190,
+    193, 196, 200, 203, 207, 211, 214, 218, 222, 226, 230, 234, 238, 242, 248, 255,
+};
+
 void setup(){
   
   Serial.begin( 9600 );
@@ -71,15 +90,52 @@ void setup(){
   for( byte i=0; i<MAX_NODES; i++ ){
     nodes[i].paired = false;
     // calculate the node colors from HSV
-    getRGB( (255/MAX_NODES)*i, 255, 255, nodes[i].nodeHue );
     getRGB( (255/MAX_NODES)*i, 70, 255, nodes[i].brightenedHue );
   }
+
+  nodes[0].nodeHue[0]  = dim_curve[255];
+  nodes[0].nodeHue[1]  = 0;
+  nodes[0].nodeHue[2]  = 0;
+  nodes[1].nodeHue[0]  = dim_curve[255];
+  nodes[1].nodeHue[1]  = dim_curve[128];
+  nodes[1].nodeHue[2]  = 0;
+  nodes[2].nodeHue[0]  = dim_curve[255];
+  nodes[2].nodeHue[1]  = dim_curve[255];
+  nodes[2].nodeHue[2]  = 0;
+  nodes[3].nodeHue[0]  = dim_curve[128];
+  nodes[3].nodeHue[1]  = dim_curve[255];
+  nodes[3].nodeHue[2]  = 0;
+  nodes[4].nodeHue[0]  = 0;
+  nodes[4].nodeHue[1]  = dim_curve[255];
+  nodes[4].nodeHue[2]  = 0;
+  nodes[5].nodeHue[0]  = 0;
+  nodes[5].nodeHue[1]  = dim_curve[255];
+  nodes[5].nodeHue[2]  = dim_curve[128];
+  nodes[6].nodeHue[0]  = 0;
+  nodes[6].nodeHue[1]  = dim_curve[255];
+  nodes[6].nodeHue[2]  = dim_curve[255];
+  nodes[7].nodeHue[0]  = 0;
+  nodes[7].nodeHue[1]  = dim_curve[128];
+  nodes[7].nodeHue[2]  = dim_curve[255];
+  nodes[8].nodeHue[0]  = 0;
+  nodes[8].nodeHue[1]  = 0;
+  nodes[8].nodeHue[2]  = dim_curve[255];
+  nodes[9].nodeHue[0]  = dim_curve[127];
+  nodes[9].nodeHue[1]  = 0;
+  nodes[9].nodeHue[2]  = dim_curve[255];
+  nodes[10].nodeHue[0] = dim_curve[255];
+  nodes[10].nodeHue[1] = 0;
+  nodes[10].nodeHue[2] = dim_curve[255];
+  nodes[11].nodeHue[0] = dim_curve[255];
+  nodes[11].nodeHue[1] = 0;
+  nodes[11].nodeHue[2] = dim_curve[127];
   
   Serial.print( "This is node: " );
   Serial.println( NODEID );
   
   ledRing.begin();
   ledRing.setBrightness( BRIGHTNESS );
+  
 }
 
 void loop(){
@@ -288,11 +344,13 @@ void updateBestRssi(){
     // been too long since we've heard from this node
     // (Maybe it shouldn't require being paired)
     // (Maybe just flag this by setting lastReceived to zero and checking for that)
-    if( nodes[i].paired && (t-nodes[i].lastReceived > LOST_INTERVAL) ){
-      Serial.print( "Lost node " );
-      Serial.println( i );
+    if( t - nodes[i].lastReceived > LOST_INTERVAL ){
       nodes[i].paired = false;
-      triggerUnpair = true;
+      if (nodes[i].paired) {
+	Serial.print( "Lost node " );
+	Serial.println( i );
+	triggerUnpair = true;
+      }
       for( byte j=0; j<AVERAGING_ARRAY_SIZE; j++ )
         nodes[i].averageArray[j] = 0;
       nodes[i].averageRssi = 0;
@@ -334,25 +392,6 @@ void clearDisplay( boolean show ){
     setLed(true); ledRing.show(); setLed(false);
   }
 }
-
-const byte dim_curve[] = {
-    0,   1,   1,   2,   2,   2,   2,   2,   2,   3,   3,   3,   3,   3,   3,   3,
-    3,   3,   3,   3,   3,   3,   3,   4,   4,   4,   4,   4,   4,   4,   4,   4,
-    4,   4,   4,   5,   5,   5,   5,   5,   5,   5,   5,   5,   5,   6,   6,   6,
-    6,   6,   6,   6,   6,   7,   7,   7,   7,   7,   7,   7,   8,   8,   8,   8,
-    8,   8,   9,   9,   9,   9,   9,   9,   10,  10,  10,  10,  10,  11,  11,  11,
-    11,  11,  12,  12,  12,  12,  12,  13,  13,  13,  13,  14,  14,  14,  14,  15,
-    15,  15,  16,  16,  16,  16,  17,  17,  17,  18,  18,  18,  19,  19,  19,  20,
-    20,  20,  21,  21,  22,  22,  22,  23,  23,  24,  24,  25,  25,  25,  26,  26,
-    27,  27,  28,  28,  29,  29,  30,  30,  31,  32,  32,  33,  33,  34,  35,  35,
-    36,  36,  37,  38,  38,  39,  40,  40,  41,  42,  43,  43,  44,  45,  46,  47,
-    48,  48,  49,  50,  51,  52,  53,  54,  55,  56,  57,  58,  59,  60,  61,  62,
-    63,  64,  65,  66,  68,  69,  70,  71,  73,  74,  75,  76,  78,  79,  81,  82,
-    83,  85,  86,  88,  90,  91,  93,  94,  96,  98,  99,  101, 103, 105, 107, 109,
-    110, 112, 114, 116, 118, 121, 123, 125, 127, 129, 132, 134, 136, 139, 141, 144,
-    146, 149, 151, 154, 157, 159, 162, 165, 168, 171, 174, 177, 180, 183, 186, 190,
-    193, 196, 200, 203, 207, 211, 214, 218, 222, 226, 230, 234, 238, 242, 248, 255,
-};
 
 void getRGB(int hue, int sat, int val, int colors[3]) { 
   /* convert hue, saturation and brightness ( HSB/HSV ) to RGB
@@ -418,4 +457,47 @@ void getRGB(int hue, int sat, int val, int colors[3]) {
     colors[1]=g;
     colors[2]=b; 
   }   
+}
+
+void convert_hcl_to_rgb(float h, float c, float l, byte rgb[]){
+  float redf, greenf, bluef;
+  if (c == 0 ){
+    redf = greenf = bluef = l;
+  }
+  float temp2;
+  if ( l < 0.5) temp2 = l * ( 1 + c);
+  else temp2 = l + c - l * c;
+  float temp1 = 2.0 * l - temp2;
+  float rtemp = h + 0.33333;
+  float gtemp = h ;
+  float btemp = h - 0.33333;
+  if (rtemp > 1 ) rtemp -= 1;
+  else if (rtemp < 0 ) rtemp += 1;
+  if (gtemp > 1 ) gtemp -= 1;
+  else if (gtemp < 0 ) gtemp += 1;
+  if (btemp > 1 ) btemp -= 1;
+  else if (btemp < 0 ) btemp += 1;
+  
+  if ( 6.0 * rtemp < 1 ) redf = temp1+ (temp2-temp1) *6.0*rtemp;
+  else if ( 2.0 * rtemp < 1 ) redf = temp2;
+  else if ( 3.0 * rtemp < 2 ) redf = temp1+ (temp2-temp1) *(0.6666-rtemp)*6.0;
+  else redf = temp1;
+  
+  if ( 6.0 * gtemp < 1 ) greenf = temp1+ (temp2-temp1) *6.0*gtemp;
+  else if ( 2.0 * gtemp < 1 ) greenf = temp2;
+  else if ( 3.0 * gtemp < 2 ) greenf = temp1+ (temp2-temp1) *(0.6666-gtemp)*6.0;
+  else greenf = temp1;
+  
+  if ( 6.0 * btemp < 1 ) bluef = temp1+ (temp2-temp1) *6.0*btemp;
+  else if ( 2.0 * btemp < 1 ) bluef = temp2;
+  else if ( 3.0 * btemp < 2 ) bluef = temp1+ (temp2-temp1) *(0.6666-btemp)*6.0;
+  else bluef = temp1;
+  
+  Serial.print( "redf: " ); Serial.println( redf );
+  Serial.print( "greenf: " ); Serial.println( greenf );
+  Serial.print( "bluef: " ); Serial.println( bluef );
+  Serial.println();
+  rgb[0] = (byte) ( 255 * redf);
+  rgb[1] = (byte) ( 255 * greenf);
+  rgb[2] = (byte) ( 255 * bluef);
 }
