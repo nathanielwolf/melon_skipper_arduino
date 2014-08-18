@@ -56,6 +56,9 @@ short bestNodes[MAX_NODES];
 byte bestRssis[MAX_NODES];
 byte bestNodesCount = 0;
 
+byte lastPairedNode;
+byte lastUnpairedNode;
+
 Adafruit_NeoPixel ledRing = Adafruit_NeoPixel( N_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800 );
 
 const byte dim_curve[] = {
@@ -166,7 +169,7 @@ void loop(){
     }
     // store received strength
     else{
-      updateNode( &nodes[ radio.SENDERID ], map( radio.RSSI, -25, -100, 100, 0 ) );
+      updateNode( radio.SENDERID, &nodes[ radio.SENDERID ], map( radio.RSSI, -25, -100, 100, 0 ) );
       Serial.print("   [RX_RSSI:"); Serial.print( map( radio.RSSI, -25, -100, 100, 0 ) ); Serial.print("]");
       Serial.println();
     }
@@ -280,9 +283,25 @@ void loop(){
         state = IDLE;
       }
       else{
-        for( byte i=0; i<N_LEDS; i++ )
+
+        for( byte i=0; i<N_LEDS/4; i++ ) {
           ledRing.setPixelColor( i, 0, 255, 0 );
-        //setLed(true); ledRing.show(); setLed(false);
+	}
+	for (byte i=N_LEDS/4*1; i < (N_LEDS / 4 * 2); i++) {
+	  ledRing.setPixelColor(i, 
+				nodes[lastPairedNode].nodeHue[0],
+				nodes[lastPairedNode].nodeHue[1],
+				nodes[lastPairedNode].nodeHue[2]);
+	}
+        for( byte i=N_LEDS/4*2; i<N_LEDS/4*3; i++ ) {
+          ledRing.setPixelColor( i, 0, 255, 0 );
+	}
+	for (byte i=N_LEDS/4*3; i < (N_LEDS / 4 * 4); i++) {
+	  ledRing.setPixelColor(i, 
+				nodes[lastPairedNode].nodeHue[0],
+				nodes[lastPairedNode].nodeHue[1],
+				nodes[lastPairedNode].nodeHue[2]);
+	}
         ledRing.show();
       }
     break;
@@ -295,8 +314,24 @@ void loop(){
         state = IDLE;
       }
       else{
-        for( byte i=0; i<N_LEDS; i++ )
+        for( byte i=0; i<N_LEDS/4; i++ ) {
           ledRing.setPixelColor( i, 255, 0, 0 );
+	}
+	for (byte i=N_LEDS/4*1; i < (N_LEDS / 4 * 2); i++) {
+	  ledRing.setPixelColor(i, 
+				nodes[lastUnpairedNode].nodeHue[0],
+				nodes[lastUnpairedNode].nodeHue[1],
+				nodes[lastUnpairedNode].nodeHue[2]);
+	}
+        for( byte i=N_LEDS/4*2; i<N_LEDS/4*3; i++ ) {
+          ledRing.setPixelColor( i, 255, 0, 0 );
+	}
+	for (byte i=N_LEDS/4*3; i < (N_LEDS / 4 * 4); i++) {
+	  ledRing.setPixelColor(i, 
+				nodes[lastUnpairedNode].nodeHue[0],
+				nodes[lastUnpairedNode].nodeHue[1],
+				nodes[lastUnpairedNode].nodeHue[2]);
+	}
         ledRing.show();
       }
     break;
@@ -360,7 +395,7 @@ void loop(){
 }
 
 // Update node status whenever we receive a packet from it
-void updateNode( Node* n, byte rssi ){
+void updateNode( byte senderId, Node* n, byte rssi ){
   n->averageArray[ n->averageIndex++ ] = rssi;
   n->averageIndex = n->averageIndex % AVERAGING_ARRAY_SIZE;
   n->averageRssi = getAverage( n->averageArray, AVERAGING_ARRAY_SIZE );
@@ -373,6 +408,7 @@ void updateNode( Node* n, byte rssi ){
   if( !n->paired && (n->averageRssi > PAIRED_THRESH) ){
     n->paired = true;
     triggerNewPair = true;
+    lastPairedNode = senderId;
     Serial.println( "Now paired" );
   }
   else if( n->paired && (n->averageRssi < UNPAIRED_THRESH) ){
@@ -396,12 +432,13 @@ void updateBestRssi(){
     // (Maybe it shouldn't require being paired)
     // (Maybe just flag this by setting lastReceived to zero and checking for that)
     if( t - nodes[i].lastReceived > LOST_INTERVAL ){
-      nodes[i].paired = false;
       if (nodes[i].paired) {
 	Serial.print( "Lost node " );
 	Serial.println( i );
+	lastUnpairedNode = i;
 	triggerUnpair = true;
       }
+      nodes[i].paired = false;
       for( byte j=0; j<AVERAGING_ARRAY_SIZE; j++ )
         nodes[i].averageArray[j] = 0;
       nodes[i].averageRssi = 0;
