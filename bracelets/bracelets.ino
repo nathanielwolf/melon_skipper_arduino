@@ -5,7 +5,7 @@
 #include <Adafruit_NeoPixel.h>
 #include "MyTypes.h"                  // Arduino hack to make structs work properly
 
-#define NODEID           3            // this should be unique for each node
+#define NODEID           8            // this should be unique for each node
 #define NETWORKID        100          // every node should be on the same network
 #define FREQUENCY        RF69_433MHZ
 #define MAX_NODES        12           // max number of nodes in our network
@@ -41,6 +41,7 @@ States state = TURNING_ON;
 boolean triggerDisplayRssi = false;
 boolean triggerNewPair = false;
 boolean triggerUnpair = false;
+byte pairedNodes[MAX_NODES] = {0,0,0,0,0,0,0,0,0,0,0,0};
 
 RFM69 radio;
 bool promiscuousMode = false;
@@ -196,12 +197,11 @@ void loop(){
         clearDisplay(true);
       }
       else{
+	byte pairedNodesCount = calcPairedNodes();
+
         // show the wipe
-	byte pairedNodes[2] = {2, 6};
-	
 	byte warmup[3] = {20, 50, 100};
 
-	short pairedNodesCount = sizeof(pairedNodes);
 	short totalLedCount = (sizeof(warmup) * 2) + (pairedNodesCount * 2);
         byte pattern[totalLedCount][3];
 
@@ -389,6 +389,18 @@ void updateBestRssi(){
     }
     
   }
+}
+
+// Calculates which nodes are paired and sets that in
+// pairedNodes. Returns the number of nodes that are paired
+byte calcPairedNodes() {
+  byte numPaired = 0;
+  for (byte i = 0; i < MAX_NODES; i++) {
+    if (nodes[i].paired) {
+      pairedNodes[numPaired++] = i;
+    }
+  }
+  return numPaired;
 }
 
 // takes an array, it's size, and returns the average
