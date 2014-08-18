@@ -22,7 +22,8 @@
 // WIPE_FRAMES 128 is the optimum number of frames to cover most wipe
 // situations.
 #define WIPE_FRAMES      128
-#define WIPE_SPEED_MODIFIER 5       // Slowdown the wipe animation
+#define WIPE_SPEED_MODIFIER 2       // Slowdown the wipe animation
+#define WIPE_LEDS_PER_NODE 5
 
 short frame = 0;
 unsigned long timestamp;
@@ -202,7 +203,7 @@ void loop(){
         // show the wipe
 	byte warmup[3] = {20, 50, 100};
 
-	short totalLedCount = (sizeof(warmup) * 2) + (pairedNodesCount * 2);
+	short totalLedCount = (sizeof(warmup) * 2) + (pairedNodesCount * WIPE_LEDS_PER_NODE);
         byte pattern[totalLedCount][3];
 
 	for (byte i = 0; i < sizeof(warmup); i++) {
@@ -210,10 +211,10 @@ void loop(){
 	  pattern[i][1] = warmup[i];
 	  pattern[i][2] = warmup[i];
 	}
-	for (byte i = 0; i < (pairedNodesCount * 2); i++) {
-	  pattern[sizeof(warmup) + i][0] = nodes[pairedNodes[i/2]].nodeHue[0];
-	  pattern[sizeof(warmup) + i][1] = nodes[pairedNodes[i/2]].nodeHue[1];
-	  pattern[sizeof(warmup) + i][2] = nodes[pairedNodes[i/2]].nodeHue[2];
+	for (byte i = 0; i < (pairedNodesCount * WIPE_LEDS_PER_NODE); i++) {
+	  pattern[sizeof(warmup) + i][0] = nodes[pairedNodes[i/WIPE_LEDS_PER_NODE]].nodeHue[0];
+	  pattern[sizeof(warmup) + i][1] = nodes[pairedNodes[i/WIPE_LEDS_PER_NODE]].nodeHue[1];
+	  pattern[sizeof(warmup) + i][2] = nodes[pairedNodes[i/WIPE_LEDS_PER_NODE]].nodeHue[2];
 	}
 	for (byte i = 0; i < sizeof(warmup); i++) {
 	  pattern[totalLedCount - sizeof(warmup) + i][0] = warmup[sizeof(warmup) - 1 - i];
