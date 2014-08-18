@@ -21,15 +21,17 @@
 
 // WIPE_FRAMES 128 is the optimum number of frames to cover most wipe
 // situations.
-#define WIPE_FRAMES      128
+#define WIPE_FRAMES         128
 #define WIPE_SPEED_MODIFIER 2       // Slowdown the wipe animation
-#define WIPE_LEDS_PER_NODE 5
+#define WIPE_LEDS_PER_NODE  5
+#define WIPE_FREQUENCY      30000   // Frequency at which to show WIPE
 
 short frame = 0;
 unsigned long timestamp;
 unsigned long lastShowRssi;
 byte currentBestNode;
 unsigned long rssiTimestamp;
+unsigned long lastWipeTimestamp;
 
 Node nodes[ MAX_NODES ];  // array of up to MAX_NODES
 
@@ -337,14 +339,18 @@ void loop(){
         triggerUnpair = false;
         timestamp = millis();
       }
-      else if( millis()-timestamp > 10*1000 ){
-        Serial.println( "Transition from IDLE to SHOWING_WIPE" );
-        frame = 0;
-        state = SHOWING_WIPE;
-      }
+      
     break;
-    
+
   }
+
+  if( (millis() - timestamp > 2000) && (millis() - lastWipeTimestamp > WIPE_FREQUENCY)) {
+    Serial.println( "Transition from IDLE to SHOWING_WIPE" );
+    frame = 0;
+    state = SHOWING_WIPE;
+    lastWipeTimestamp = millis();
+  }
+
   setLed(false);
     
   delay(30);
