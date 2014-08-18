@@ -27,6 +27,9 @@
 
 short frame = 0;
 unsigned long timestamp;
+unsigned long lastShowRssi;
+byte currentBestNode;
+unsigned long rssiTimestamp;
 
 Node nodes[ MAX_NODES ];  // array of up to MAX_NODES
 
@@ -42,13 +45,14 @@ States state = TURNING_ON;
 boolean triggerDisplayRssi = false;
 boolean triggerNewPair = false;
 boolean triggerUnpair = false;
-byte pairedNodes[MAX_NODES] = {0,0,0,0,0,0,0,0,0,0,0,0};
+byte pairedNodes[MAX_NODES];
 
 RFM69 radio;
 bool promiscuousMode = false;
 unsigned long lastSend = 0;
-byte bestRSSI = 0;
-byte bestNode;
+short bestNodes[MAX_NODES];
+byte bestRssis[MAX_NODES];
+byte bestNodesCount = 0;
 
 Adafruit_NeoPixel ledRing = Adafruit_NeoPixel( N_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800 );
 
@@ -234,25 +238,35 @@ void loop(){
     break;
     
     case SHOWING_RSSI:
-      if( frame > bestRSSI/6 ){  // if we've filled out the display
-        if( millis() - timestamp > 3000 ){  // and the display has been on for 3s
-          // clear the display and transition to idle
-          Serial.println( "Transition from SHOWING_RSSI to IDLE" );
-          state = IDLE;
-          clearDisplay(true);
-          timestamp = millis();
+
+      if (currentBestNode >= bestNodesCount) {
+	// clear the display and transition to idle
+	Serial.println( "Transition from SHOWING_RSSI to IDLE" );
+	state = IDLE;
+	clearDisplay(true);
+	timestamp = millis();
+	lastShowRssi = millis();
+      } else if( frame > bestRssis[currentBestNode] / 6 ) {  // if we've filled out the display
+        if( millis() - rssiTimestamp > 2000 ){  // and the display has been on for 2s
+	  currentBestNode++;
+	  rssiTimestamp = millis();
+	  frame = 0;
+	  clearDisplay(true);
         }
       }
-      else{
-        for( byte i=0; i<frame; i++ ){
-          if( (i+1 > 2) && (i+1 == bestRSSI/6 ) )
-            ledRing.setPixelColor( i, nodes[bestNode].brightenedHue[0], nodes[bestNode].brightenedHue[1], nodes[bestNode].brightenedHue[2] );
-          else
-            ledRing.setPixelColor( i, nodes[bestNode].nodeHue[0], nodes[bestNode].nodeHue[1], nodes[bestNode].nodeHue[2] );
-        }
-        //setLed(true); ledRing.show(); setLed(false);
-        ledRing.show();
-        frame++;
+      else {
+	short bestNode = bestNodes[currentBestNode];
+	if (bestNode != -1) {
+	  for ( byte i=0; i<frame; i++ ){
+	    if( (i+1 > 2) && (i+1 == bestRssis[currentBestNode] / 6 ) ) {
+	      ledRing.setPixelColor( i, nodes[bestNode].brightenedHue[0], nodes[bestNode].brightenedHue[1], nodes[bestNode].brightenedHue[2] );
+	    } else {
+	      ledRing.setPixelColor( i, nodes[bestNode].nodeHue[0], nodes[bestNode].nodeHue[1], nodes[bestNode].nodeHue[2] );
+	    }
+	  }
+	  ledRing.show();
+	}
+	frame++;
       }
     break;
     
@@ -308,13 +322,13 @@ void loop(){
         triggerNewPair = false;
         timestamp = millis();
       }
-      else if( triggerDisplayRssi && (millis()-timestamp>2000) ){
+      else if( triggerDisplayRssi && (millis()-timestamp>2000) && (millis() - lastShowRssi > 10000)){
         Serial.println( "Transition from IDLE to SHOWING_RSSI" );
-        Serial.print( "Best RSSI: " ); Serial.println( bestRSSI );
-        Serial.print( "Best Node: " ); Serial.println( bestNode );
         frame = 0;
         state = SHOWING_RSSI;
+	currentBestNode = 0;
         triggerDisplayRssi = false;
+	rssiTimestamp = millis();
         timestamp = millis();
       }
       else if( triggerUnpair && (millis()-timestamp>2000) ){
@@ -363,11 +377,15 @@ void updateNode( Node* n, byte rssi ){
 }
 
 void updateBestRssi(){
-  bestRSSI = 0;
+  //bestRSSI = 0;
   
   unsigned long t = millis();
+  bestNodesCount = 0;
+  
   for( byte i=0; i<MAX_NODES; i++ ){
-    
+  
+    bestNodes[i] = -1;
+
     // been too long since we've heard from this node
     // (Maybe it shouldn't require being paired)
     // (Maybe just flag this by setting lastReceived to zero and checking for that)
@@ -384,9 +402,9 @@ void updateBestRssi(){
     }
     
     // who's the closet
-    if( !nodes[i].paired && (nodes[i].averageRssi > bestRSSI) ){
-      bestRSSI = nodes[i].averageRssi;
-      bestNode = i;
+    if( !nodes[i].paired && nodes[i].averageRssi > 0 ){
+      bestRssis[bestNodesCount] = nodes[i].averageRssi;
+      bestNodes[bestNodesCount++] = i;
     }
     
   }
