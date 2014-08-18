@@ -19,7 +19,11 @@
 #define LED_PIN          A0
 //#define LED_PIN          4
 
-#define WIPE_FRAMES      64
+// WIPE_FRAMES 128 is the optimum number of frames to cover most wipe
+// situations.
+#define WIPE_FRAMES      128
+#define WIPE_SPEED_MODIFIER 5       // Slowdown the wipe animation
+
 short frame = 0;
 unsigned long timestamp;
 
@@ -193,12 +197,34 @@ void loop(){
       }
       else{
         // show the wipe
-        byte pattern[6] = {20, 50, 100, 100, 50, 20};
-        if( frame%2 == 0 ){ // slow down the animation a little
+	byte pairedNodes[2] = {2, 6};
+	
+	byte warmup[3] = {20, 50, 100};
+
+	short pairedNodesCount = sizeof(pairedNodes);
+	short totalLedCount = (sizeof(warmup) * 2) + (pairedNodesCount * 2);
+        byte pattern[totalLedCount][3];
+
+	for (byte i = 0; i < sizeof(warmup); i++) {
+	  pattern[i][0] = warmup[i];
+	  pattern[i][1] = warmup[i];
+	  pattern[i][2] = warmup[i];
+	}
+	for (byte i = 0; i < (pairedNodesCount * 2); i++) {
+	  pattern[sizeof(warmup) + i][0] = nodes[pairedNodes[i/2]].nodeHue[0];
+	  pattern[sizeof(warmup) + i][1] = nodes[pairedNodes[i/2]].nodeHue[1];
+	  pattern[sizeof(warmup) + i][2] = nodes[pairedNodes[i/2]].nodeHue[2];
+	}
+	for (byte i = 0; i < sizeof(warmup); i++) {
+	  pattern[totalLedCount - sizeof(warmup) + i][0] = warmup[sizeof(warmup) - 1 - i];
+	  pattern[totalLedCount - sizeof(warmup) + i][1] = warmup[sizeof(warmup) - 1 - i];
+	  pattern[totalLedCount - sizeof(warmup) + i][2] = warmup[sizeof(warmup) - 1 - i];
+	}
+        if( frame % WIPE_SPEED_MODIFIER == 0 ){ // slow down the animation a little
           clearDisplay(false);
-          short i=frame/2;
-          for( short j=6; j>=0 && i>=0; j--, i-- ){
-            ledRing.setPixelColor( i, pattern[j], pattern[j], pattern[j] );
+          short i = frame / WIPE_SPEED_MODIFIER;
+          for( short j = totalLedCount - 1; j>=0 && i>=0; j--, i-- ){
+            ledRing.setPixelColor( i, pattern[j][0], pattern[j][1], pattern[j][2] );
           }
         }
         frame++;
