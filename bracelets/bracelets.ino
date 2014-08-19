@@ -5,19 +5,18 @@
 #include <Adafruit_NeoPixel.h>
 #include "MyTypes.h"                  // Arduino hack to make structs work properly
 
-#define NODEID           2            // this should be unique for each node
-#define NETWORKID        100          // every node should be on the same network
+#define NODEID           1            // this should be unique for each node
+#define NETWORKID        99           // every node should be on the same network
 #define FREQUENCY        RF69_433MHZ
 #define MAX_NODES        12           // max number of nodes in our network
 #define PAIRED_THRESH    70           // threshold that determines nodes are paired (nearby)
 #define UNPAIRED_THRESH  30           // after going below this threshold, nodes are unpaired (lost)
 #define SEND_INTERVAL    2000
 #define LOST_INTERVAL    40000        // if we haven't heard from a node for this long, they're lost
-#define BRIGHTNESS       100          // global control over LED brightness
+#define BRIGHTNESS       50          // global control over LED brightness
 
 #define N_LEDS           16
 #define LED_PIN          A0
-//#define LED_PIN          4
 
 // WIPE_FRAMES 128 is the optimum number of frames to cover most wipe
 // situations.
@@ -363,9 +362,9 @@ void loop(){
         state = IDLE;
       }
       else{
-        for( byte i=0; i<N_LEDS; i++ )
+        for( byte i=0; i<N_LEDS; i++ ) {
           ledRing.setPixelColor( i, nodes[NODEID].nodeHue[0], nodes[NODEID].nodeHue[1], nodes[NODEID].nodeHue[2] );
-        //setLed(true); ledRing.show(); setLed(false);
+	}
         ledRing.show();
       }
     break;
@@ -578,45 +577,3 @@ void getRGB(int hue, int sat, int val, int colors[3]) {
   }   
 }
 
-void convert_hcl_to_rgb(float h, float c, float l, byte rgb[]){
-  float redf, greenf, bluef;
-  if (c == 0 ){
-    redf = greenf = bluef = l;
-  }
-  float temp2;
-  if ( l < 0.5) temp2 = l * ( 1 + c);
-  else temp2 = l + c - l * c;
-  float temp1 = 2.0 * l - temp2;
-  float rtemp = h + 0.33333;
-  float gtemp = h ;
-  float btemp = h - 0.33333;
-  if (rtemp > 1 ) rtemp -= 1;
-  else if (rtemp < 0 ) rtemp += 1;
-  if (gtemp > 1 ) gtemp -= 1;
-  else if (gtemp < 0 ) gtemp += 1;
-  if (btemp > 1 ) btemp -= 1;
-  else if (btemp < 0 ) btemp += 1;
-  
-  if ( 6.0 * rtemp < 1 ) redf = temp1+ (temp2-temp1) *6.0*rtemp;
-  else if ( 2.0 * rtemp < 1 ) redf = temp2;
-  else if ( 3.0 * rtemp < 2 ) redf = temp1+ (temp2-temp1) *(0.6666-rtemp)*6.0;
-  else redf = temp1;
-  
-  if ( 6.0 * gtemp < 1 ) greenf = temp1+ (temp2-temp1) *6.0*gtemp;
-  else if ( 2.0 * gtemp < 1 ) greenf = temp2;
-  else if ( 3.0 * gtemp < 2 ) greenf = temp1+ (temp2-temp1) *(0.6666-gtemp)*6.0;
-  else greenf = temp1;
-  
-  if ( 6.0 * btemp < 1 ) bluef = temp1+ (temp2-temp1) *6.0*btemp;
-  else if ( 2.0 * btemp < 1 ) bluef = temp2;
-  else if ( 3.0 * btemp < 2 ) bluef = temp1+ (temp2-temp1) *(0.6666-btemp)*6.0;
-  else bluef = temp1;
-  
-  Serial.print( "redf: " ); Serial.println( redf );
-  Serial.print( "greenf: " ); Serial.println( greenf );
-  Serial.print( "bluef: " ); Serial.println( bluef );
-  Serial.println();
-  rgb[0] = (byte) ( 255 * redf);
-  rgb[1] = (byte) ( 255 * greenf);
-  rgb[2] = (byte) ( 255 * bluef);
-}
