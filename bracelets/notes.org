@@ -1,0 +1,125 @@
+* Notes
+
+** Wipe should show who we're paired with
+
+SHOWING_WIPE is a state
+WIPE_FRAMES is 64.
+
+During SHOWING_WIPE:
+
+if frame < 64, 
+there is a wipe pattern, 250, 05, 100, 100, 50, 20
+animation is half speed
+clears display before each time
+
+first frame, clear display, i = 0.
+For j=5,
+set the led pixel color for i to the pattern for RGB 20, 20, 20
+
+frame = 0; i = 0; j = 5; 
+led.setColor 0, 20, 20, 20
+j = 4;
+
+frame = 0; i = 0; j = 5;
+led.setColor 0, 20, 20, 20
+
+frame = 2; i = 1; j = 5;
+led.setColor 1, 20, 20, 20
+led.setColor 0, 50, 50, 50
+
+frame = 4; i = 2; j = 5;
+led.setColor 2, 20, 20, 20
+led.setColor 1, 50, 50, 50
+led.setColor 0, 100, 100, 100
+
+..
+
+frame = 16; i = 8; j = 5;
+led.setColor 8, 20, 20, 20
+led.setColor 7, 50, 50, 50
+led.setColor 6, 100, 100, 100
+led.setColor 5, 100, 100, 100
+led.setColor 4, 50, 50, 50
+led.setColor 3, 20, 20, 20
+
+
+frame = 16; i = 8; j = 5;
+led.setColor 8, 20, 20, 20
+led.setColor 7, 50, 50, 50
+led.setColor 6, node[i].color[0]
+led.setColor 6, 100, 100, 100
+led.setColor 5, 100, 100, 100
+led.setColor 4, 50, 50, 50
+led.setColor 3, 20, 20, 20
+
+Find all the paired nodes. For each, we want to include the paired
+color for 2 leds during the wipe. But build up and tail down using the
+same white brightness LEDs. 
+
+can do this with pre-pattern and post pattern.
+pre-pattern is 20, 50
+
+frame = 0; 
+led.setColor 0, 20, 20, 20
+
+frame = 2;
+led.setColor 1, 20, 20, 20
+led.setColor 0, 50, 50, 50
+
+frame = 4;
+
+led.setColor 2, 20, 20, 20
+led.setColor 1, 50, 50, 50
+led.setColor 0, nodes[paired[k]].color[0], nodes[paired[k]].color[1], 
+
+frame = 6;
+led.setColor 3, 20, 20, 20
+led.setColor 2, 50, 50, 50
+led.setColor 1, nodes[paired[k]].color[0], nodes[paired[k]].color[1], 
+led.setColor 0, nodes[paired[k]].color[0], nodes[paired[k]].color[1], 
+
+frame = 8;
+5 4 led.setColor 4, 20, 20, 20
+4 3 led.setColor 3, 50, 50, 50
+3 2 led.setColor 2, nodes[paired[k]].color[0], nodes[paired[k]].color[1], 
+led.setColor 1, nodes[paired[k]].color[0], nodes[paired[k]].color[1], 
+led.setColor 0, nodes[paired[k]].color[0], nodes[paired[k]].color[1], 
+
+use an inner loop
+
+** Showing RSSI
+
+bestRSSI is calculated near the start of every loop. It goes through each node. At that time it also updates whether a node is paired or not. If it is not paired but has a better RSSI, then set this to the best RSSI
+
+As for the animation, if the frame is greater than bestRSSI(rssi)/6, that's the end. The start is, for each led up to frame, 
+
+frame is set somewhere else. It's set before it goes to SHOWING_RSSI. 
+
+bestRssi = 60;
+
+frame=0;
+i=0;
+
+frame=1;
+i=0;
+if 1 > 2. No, setPixelColor(0, bestNode...)
+
+frame=2;
+i=0; if 1 > 2. No, setPixel 0, best node
+i=1; if 2 > 2. No, setPixel 1, best node
+
+frame=3;
+i=0; if 1 > 2. No, setPixel 0, best node
+i=1; if 2 > 2. No, setPixel 1, best node
+i=2; if 3 > 2 && 3 == 10? No, setPixel 2, best node
+
+So, always have a minimum of 2 colors
+Once we reach RSSI / 6, then show the brightened node color.
+
+Finally, once we reach a frame that equals RSSI / 6 (10), then hold the display for 3s. Then transition to IDLE.
+
+What I want to do, is every 10 seconds, play the top 3 RSSI nodes. Each gets to animate up, hold for 2s.
+
+How do we change to SHOWING_RSSI? If it's in IDLE, and a triggerDisplayRssi flag is true. Which happens when we receive a packet, and that node is NOT paired.
+
+

@@ -5,7 +5,7 @@
 #include <Adafruit_NeoPixel.h>
 #include "MyTypes.h"                  // Arduino hack to make structs work properly
 
-#define NODEID           8            // this should be unique for each node
+#define NODEID           11            // this should be unique for each node
 #define NETWORKID        100          // every node should be on the same network
 #define FREQUENCY        RF69_433MHZ
 #define MAX_NODES        12           // max number of nodes in our network
@@ -285,7 +285,7 @@ void loop(){
       else{
 
         for( byte i=0; i<N_LEDS/4; i++ ) {
-          ledRing.setPixelColor( i, 255, 255, 255 );
+          ledRing.setPixelColor( i, 0, 255, 0 );
 	}
 	for (byte i=N_LEDS/4*1; i < (N_LEDS / 4 * 2); i++) {
 	  ledRing.setPixelColor(i, 
@@ -294,7 +294,7 @@ void loop(){
 				nodes[lastPairedNode].nodeHue[2]);
 	}
         for( byte i=N_LEDS/4*2; i<N_LEDS/4*3; i++ ) {
-          ledRing.setPixelColor( i, 255, 255, 255 );
+          ledRing.setPixelColor( i, 0, 255, 0 );
 	}
 	for (byte i=N_LEDS/4*3; i < (N_LEDS / 4 * 4); i++) {
 	  ledRing.setPixelColor(i, 
@@ -315,7 +315,7 @@ void loop(){
       }
       else{
         for( byte i=0; i<N_LEDS/4; i++ ) {
-          ledRing.setPixelColor( i, 0, 0, 0 );
+          ledRing.setPixelColor( i, 255, 0, 0 );
 	}
 	for (byte i=N_LEDS/4*1; i < (N_LEDS / 4 * 2); i++) {
 	  ledRing.setPixelColor(i, 
@@ -324,7 +324,7 @@ void loop(){
 				nodes[lastUnpairedNode].nodeHue[2]);
 	}
         for( byte i=N_LEDS/4*2; i<N_LEDS/4*3; i++ ) {
-          ledRing.setPixelColor( i, 0, 0, 0 );
+          ledRing.setPixelColor( i, 255, 0, 0 );
 	}
 	for (byte i=N_LEDS/4*3; i < (N_LEDS / 4 * 4); i++) {
 	  ledRing.setPixelColor(i, 
