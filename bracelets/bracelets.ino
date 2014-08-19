@@ -5,14 +5,14 @@
 #include <Adafruit_NeoPixel.h>
 #include "MyTypes.h"                  // Arduino hack to make structs work properly
 
-#define NODEID           8            // this should be unique for each node
+#define NODEID           2            // this should be unique for each node
 #define NETWORKID        100          // every node should be on the same network
 #define FREQUENCY        RF69_433MHZ
 #define MAX_NODES        12           // max number of nodes in our network
-#define PAIRED_THRESH    75           // threshold that determines nodes are paired (nearby)
-#define UNPAIRED_THRESH  50           // after going below this threshold, nodes are unpaired (lost)
+#define PAIRED_THRESH    70           // threshold that determines nodes are paired (nearby)
+#define UNPAIRED_THRESH  30           // after going below this threshold, nodes are unpaired (lost)
 #define SEND_INTERVAL    2000
-#define LOST_INTERVAL    20000        // if we haven't heard from a node for this long, they're lost
+#define LOST_INTERVAL    40000        // if we haven't heard from a node for this long, they're lost
 #define BRIGHTNESS       100          // global control over LED brightness
 
 #define N_LEDS           16
@@ -32,6 +32,7 @@ unsigned long lastShowRssi;
 byte currentBestNode;
 unsigned long rssiTimestamp;
 unsigned long lastWipeTimestamp;
+unsigned long lastSleepMillis;
 
 Node nodes[ MAX_NODES ];  // array of up to MAX_NODES
 
@@ -47,6 +48,7 @@ States state = TURNING_ON;
 boolean triggerDisplayRssi = false;
 boolean triggerNewPair = false;
 boolean triggerUnpair = false;
+boolean triggerRadioSleep = false;
 byte pairedNodes[MAX_NODES];
 
 RFM69 radio;
@@ -80,14 +82,7 @@ const byte dim_curve[] = {
     193, 196, 200, 203, 207, 211, 214, 218, 222, 226, 230, 234, 238, 242, 248, 255,
 };
 
-void setup(){
-  
-  Serial.begin( 9600 );
-  delay(10);
-  
-  // Configure the watchdog timer
-  wdt_enable(WDTO_8S);
-  
+void initRadio() {
   radio.initialize( FREQUENCY, NODEID, NETWORKID );
   radio.promiscuous( promiscuousMode );
   radio.setHighPower();
@@ -100,6 +95,17 @@ void setup(){
   radio.writeReg( 0x06, 0x52 );
   radio.writeReg( 0x19, 0x40 | 0x10 | 0x05 );
   radio.writeReg( 0x18, 0x00 | 0x00 | 0x01 );
+}
+
+void setup(){
+  
+  Serial.begin( 9600 );
+  delay(10);
+  
+  // Configure the watchdog timer
+  wdt_enable(WDTO_8S);
+
+  initRadio();
   
   // initialize the nodes array
   for( byte i=0; i<MAX_NODES; i++ ){
@@ -190,6 +196,19 @@ void loop(){
     setLed(false);
     blink();
   }
+
+  if ( millis() - lastSend > 10000) {
+    Serial.println("Putting radio to sleep");
+    radio.sleep();
+    lastSleepMillis = millis();
+    triggerRadioSleep = true;
+  }
+
+  if ( triggerRadioSleep && millis() - lastSleepMillis > 1000) {
+    Serial.println("Waking radio up");
+    triggerRadioSleep = false;
+    initRadio();
+  }
   
   updateBestRssi();
   
@@ -251,7 +270,7 @@ void loop(){
 	clearDisplay(true);
 	timestamp = millis();
 	lastShowRssi = millis();
-      } else if( frame > bestRssis[currentBestNode] / 6 ) {  // if we've filled out the display
+      } else if( frame > bestRssis[currentBestNode] / 4 ) {  // if we've filled out the display
         if( millis() - rssiTimestamp > 2000 ){  // and the display has been on for 2s
 	  currentBestNode++;
 	  rssiTimestamp = millis();
@@ -263,7 +282,7 @@ void loop(){
 	short bestNode = bestNodes[currentBestNode];
 	if (bestNode != -1) {
 	  for ( byte i=0; i<frame; i++ ){
-	    if( (i+1 > 2) && (i+1 == bestRssis[currentBestNode] / 6 ) ) {
+	    if( (i+1 > 2) && (i+1 == bestRssis[currentBestNode] / 4 ) ) {
 	      ledRing.setPixelColor( i, nodes[bestNode].brightenedHue[0], nodes[bestNode].brightenedHue[1], nodes[bestNode].brightenedHue[2] );
 	    } else {
 	      ledRing.setPixelColor( i, nodes[bestNode].nodeHue[0], nodes[bestNode].nodeHue[1], nodes[bestNode].nodeHue[2] );
